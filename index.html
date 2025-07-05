@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>두더지 잡기</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      margin-top: 30px;
+    }
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(5, 80px);
+      grid-gap: 10px;
+      justify-content: center;
+      margin: 30px auto;
+    }
+    .hole {
+      width: 80px;
+      height: 80px;
+      background-color: #a0d2eb;
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+    }
+    .mole {
+      width: 60px;
+      height: 60px;
+      background-color: brown;
+      border-radius: 50%;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: none;
+    }
+    .show {
+      display: block;
+    }
+    #score, #timer, #combo {
+      font-size: 1.2em;
+      margin: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>두더지 잡기로 위장한 에임연습(정승환)</h1>
+  <div id="score">점수: 0</div>
+  <div id="combo">콤보: 0</div>
+  <div id="timer">남은 시간: 60초</div>
+  <div id="game-board"></div>
+  <button onclick="startGame()">게임 시작</button>
+
+  <script>
+    const gameBoard = document.getElementById('game-board');
+    const scoreDisplay = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+    const comboDisplay = document.getElementById('combo');
+
+    const MOLE_COUNT = 5;
+    const TOTAL_HOLES = 25;
+    let score = 0;
+    let combo = 0;
+    let timeLeft = 60;
+    let countdownInterval;
+    let activeMoles = new Set();
+
+    // 구멍 생성
+    for (let i = 0; i < TOTAL_HOLES; i++) {
+      const hole = document.createElement('div');
+      hole.classList.add('hole');
+      const mole = document.createElement('div');
+      mole.classList.add('mole');
+      hole.appendChild(mole);
+      gameBoard.appendChild(hole);
+    }
+
+    const holes = document.querySelectorAll('.hole');
+
+    function getRandomIndexes(count, exclude = []) {
+      const available = [...Array(holes.length).keys()].filter(i => !exclude.includes(i));
+      const selected = [];
+      while (selected.length < count && available.length > 0) {
+        const randIndex = Math.floor(Math.random() * available.length);
+        selected.push(available[randIndex]);
+        available.splice(randIndex, 1);
+      }
+      return selected;
+    }
+
+    function showMoles() {
+      // 기존 두더지 초기화
+      holes.forEach(hole => {
+        hole.querySelector('.mole').classList.remove('show');
+      });
+
+      activeMoles.clear();
+      const indexes = getRandomIndexes(MOLE_COUNT);
+      indexes.forEach(i => {
+        holes[i].querySelector('.mole').classList.add('show');
+        activeMoles.add(i);
+      });
+    }
+
+    function moveMole(oldIndex) {
+      activeMoles.delete(oldIndex);
+      holes[oldIndex].querySelector('.mole').classList.remove('show');
+      const newIndexes = getRandomIndexes(1, Array.from(activeMoles));
+      if (newIndexes.length > 0) {
+        const newIndex = newIndexes[0];
+        holes[newIndex].querySelector('.mole').classList.add('show');
+        activeMoles.add(newIndex);
+      }
+    }
+
+    function updateDisplays() {
+      scoreDisplay.textContent = `점수: ${score}`;
+      comboDisplay.textContent = `콤보: ${combo}`;
+    }
+
+    function startGame() {
+      score = 0;
+      combo = 0;
+      timeLeft = 60;
+      updateDisplays();
+      timerDisplay.textContent = '남은 시간: 60초';
+
+      clearInterval(countdownInterval);
+      showMoles();
+
+      countdownInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `남은 시간: ${timeLeft}초`;
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval);
+          holes.forEach(hole => hole.querySelector('.mole').classList.remove('show'));
+          alert(`게임 종료! 당신의 점수는 ${score}점입니다.`);
+        }
+      }, 1000);
+    }
+
+    holes.forEach((hole, index) => {
+      hole.addEventListener('click', () => {
+        const mole = hole.querySelector('.mole');
+        if (mole.classList.contains('show')) {
+          combo++;
+          let bonus = Math.floor(combo / 5); // 5콤보마다 +1
+          score += 1 + bonus;
+          updateDisplays();
+          moveMole(index);
+        } else {
+          // 틀림: 콤보 끊기, 감점
+          if (score > 0) score--;
+          combo = 0;
+          updateDisplays();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
